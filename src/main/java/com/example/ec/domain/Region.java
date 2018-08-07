@@ -17,7 +17,7 @@ public enum Region {
         for(Region region : Region.values())
             if (region.label.equalsIgnoreCase(label))
                 return region;
-            
+
         return null;
     }
 }
