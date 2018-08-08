@@ -6,6 +6,9 @@ import com.example.ec.domain.TourRatingPk;
 import com.example.ec.repository.TourRatingRepository;
 import com.example.ec.repository.TourRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -53,9 +56,11 @@ public class TourRatingController {
     }
 
     @RequestMapping(method = RequestMethod.GET)
-    public List<RatingDto> getAllRatingForTour(@PathVariable(value = "tourId") int tourId) {
+    public Page<RatingDto> getAllRatingForTour(@PathVariable(value = "tourId") int tourId, Pageable pageable) {
         verifyTour(tourId);
-        return tourRatingRepository.findByPkTourId(tourId).stream().map(tourRating -> toDto(tourRating)).collect(Collectors.toList());
+        Page<TourRating> tourRatingPage = tourRatingRepository.findByPkTourId(tourId, pageable);
+        List<RatingDto> ratingDtoList = tourRatingPage.getContent().stream().map(tourRating -> toDto(tourRating)).collect(Collectors.toList());
+        return new PageImpl<RatingDto>(ratingDtoList, pageable, tourRatingPage.getTotalPages());
     }
 
     @RequestMapping(method = RequestMethod.GET, path = "/average")
