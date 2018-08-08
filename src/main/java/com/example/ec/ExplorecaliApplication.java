@@ -50,7 +50,6 @@ public class ExplorecaliApplication implements CommandLineRunner {
 		private String packageType, title, description, blurb, price,
 				length, bullets, keywords, difficulty, region;
 
-
 		static List<TourFromFile> importTours() throws IOException {
 			return new ObjectMapper()
 					.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY)

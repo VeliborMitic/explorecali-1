@@ -10,8 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping(path = "/tours/{tourId}/ratings")
@@ -46,5 +46,54 @@ public class TourRatingController {
     @ExceptionHandler(NoSuchElementException.class)
     public String return400(NoSuchElementException exception) {
         return exception.getMessage();
+    }
+
+    private RatingDto toDto(TourRating tourRating) {
+        return new RatingDto(tourRating.getScore(), tourRating.getComment(), tourRating.getPk().getCustomerId());
+    }
+
+    @RequestMapping(method = RequestMethod.GET)
+    public List<RatingDto> getAllRatingForTour(@PathVariable(value = "tourId") int tourId) {
+        verifyTour(tourId);
+        return tourRatingRepository.findByPkTourId(tourId).stream().map(tourRating -> toDto(tourRating)).collect(Collectors.toList());
+    }
+
+    @RequestMapping(method = RequestMethod.GET, path = "/average")
+    public AbstractMap.SimpleEntry<String, Double> getAverage(@PathVariable(value = "tourId") int tourId) {
+        verifyTour(tourId);
+        List<TourRating> tourRatings = tourRatingRepository.findByPkTourId(tourId);
+        OptionalDouble average = tourRatings.stream().mapToInt(TourRating::getScore).average();
+        return new AbstractMap.SimpleEntry<String, Double>("average", average.isPresent() ? average.getAsDouble(): null);
+    }
+
+    @RequestMapping(method = RequestMethod.PUT)
+    public RatingDto updateWithPut(@PathVariable(value = "tourId") int tourId, @RequestBody @Validated RatingDto ratingDto) {
+        TourRating tourRating = verifyTourRating(tourId, ratingDto.getCustomerId());
+        tourRating.setScore(ratingDto.getScore());
+        tourRating.setComment(ratingDto.getComment());
+        return toDto(tourRatingRepository.save(tourRating));
+    }
+
+    @RequestMapping(method = RequestMethod.PATCH)
+    public RatingDto updateWithPatch(@PathVariable(value = "tourId") int tourId, @RequestBody @Validated RatingDto ratingDto) {
+        TourRating tourRating = verifyTourRating(tourId, ratingDto.getCustomerId());
+        if (ratingDto.getScore() != null)
+            tourRating.setScore(ratingDto.getScore());
+        if(ratingDto.getComment() != null)
+            tourRating.setComment(ratingDto.getComment());
+        return toDto(tourRatingRepository.save(tourRating));
+    }
+
+    @RequestMapping(method = RequestMethod.DELETE, path = "/{customerId}")
+    public void delete(@PathVariable(value = "tourId") int tourId, @PathVariable(value = "customerId") int customerId) {
+        TourRating tourRating = verifyTourRating(tourId, customerId);
+        tourRatingRepository.delete(tourRating);
+    }
+
+    private TourRating verifyTourRating(int tourId, int customerId) throws NoSuchElementException {
+        TourRating rating = tourRatingRepository.findByPkTourIdAndPkCustomerId(tourId, customerId);
+        if (rating == null)
+            throw new NoSuchElementException("Tour-Rating pair for request (" + tourId + " for customer " + customerId);
+        return rating;
     }
 }
